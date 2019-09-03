@@ -113,12 +113,50 @@ def init_alarm(alarm_dict):
     # 定时任务
     scheduler = BackgroundScheduler()
     for key, value in alarm_dict.items():
-        scheduler.add_job(send_alarm_msg, 'cron', [key], hour=value['hour'],
-                          minute=value['minute'], id=key, misfire_grace_time=600)
+        if value['hour'] == '6':
+            scheduler.add_job(send_alarm_msg, 'cron', [key], hour=value['hour'],
+                              minute=value['minute'], id=key, misfire_grace_time=600)
+        elif value['hour'] > 17:
+            scheduler.add_job(send_xiaohua_message, 'cron', [key], hour=value['hour'],
+                              minute=value['minute'], id=key, misfire_grace_time=600)
+        else:
+            scheduler.add_job(send_tuwei_message, 'cron', [key], hour=value['hour'],
+                              minute=value['minute'], id=key, misfire_grace_time=600)
+
     scheduler.start()
     # print('已开启定时发送提醒功能...')
     # print(scheduler.get_jobs())
 
+def send_tuwei_message(key):
+    """ 发送定时消息 """
+    print('\n启动定时消息提醒...')
+    conf = config.get('alarm_info').get('alarm_dict')
+    gf = conf.get(key)
+
+    dictum = get_dictum_info(3)
+
+    if not dictum or not is_online(): return
+    uuid_list = gf.get('uuid_list')
+    for uuid in uuid_list:
+        time.sleep(1)
+        itchat.send(dictum, toUserName=uuid)
+    print('\n定时内容:\n{}\n发送成功...\n\n'.format(dictum))
+    print('自动提醒消息发送完成...\n')
+
+def send_xiaohua_message(key):
+    """ 发送定时消息 """
+    print('\n启动定时消息提醒...')
+    conf = config.get('alarm_info').get('alarm_dict')
+    gf = conf.get(key)
+
+    dictum = get_dictum_info(5)
+    if not dictum or not is_online(): return
+    uuid_list = gf.get('uuid_list')
+    for uuid in uuid_list:
+        time.sleep(1)
+        itchat.send(dictum, toUserName=uuid)
+    print('\n定时内容:\n{}\n发送成功...\n\n'.format(dictum))
+    print('自动提醒消息发送完成...\n')
 
 def send_alarm_msg(key):
     """ 发送定时提醒 """
@@ -134,7 +172,7 @@ def send_alarm_msg(key):
     dictum = get_dictum_info(gf.get('dictum_channel'))
     diff_time = get_diff_time(gf.get('start_date'), gf.get('start_date_msg'))
     sweet_words = gf.get('sweet_words')
-    send_msg = '\n'.join(
+    send_msg = '\n\n'.join(
         x for x in [calendar_info, weather, horoscope, dictum, diff_time, sweet_words] if x)
     # print('\n' + send_msg + '\n')
     if not send_msg or not is_online(): return
