@@ -8,7 +8,7 @@
 import time
 # import json
 import platform
-# from apscheduler.schedulers.blocking import BlockingScheduler
+from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.schedulers.background import BackgroundScheduler
 import itchat
 from itchat.content import (
@@ -113,18 +113,18 @@ def init_alarm(alarm_dict):
     # 定时任务
     scheduler = BackgroundScheduler()
     for key, value in alarm_dict.items():
-        if value['hour'] < 10:
+        if value['hour'] == 6:
             scheduler.add_job(send_alarm_msg, 'cron', [key], hour=value['hour'],
                               minute=value['minute'], id=key, misfire_grace_time=600)
-        elif value['hour'] == 12 or value['hour'] == 14 or value['hour'] == 16 or value['hour'] == 18:
-            scheduler.add_job(send_xiaohua_message, 'cron', [key], hour=value['hour'],
+        elif value['minute'] == 0:
+            scheduler.add_job(send_tuwei_message, 'cron', [key], hour=value['hour'],
                               minute=value['minute'], id=key, misfire_grace_time=600)
         else:
-            scheduler.add_job(send_tuwei_message, 'cron', [key], hour=value['hour'],
+            scheduler.add_job(send_xiaohua_message, 'cron', [key], hour=value['hour'],
                               minute=value['minute'], id=key, misfire_grace_time=600)
 
     scheduler.start()
-    # print('已开启定时发送提醒功能...')
+    print('已开启定时发送提醒功能...')
     # print(scheduler.get_jobs())
 
 def send_tuwei_message(key):
