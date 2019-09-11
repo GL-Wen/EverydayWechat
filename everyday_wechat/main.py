@@ -12,6 +12,7 @@ import platform
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.schedulers.background import BackgroundScheduler
 import itchat
+import pymongo
 from itchat.content import (
     TEXT
 )
@@ -37,16 +38,21 @@ from everyday_wechat.utils.friend_helper import (
 
 __all__ = ['run']
 
-
 def run():
     """ 主运行入口 """
 
     os.makedirs('./image/', exist_ok=True)
 
+    client = pymongo.MongoClient(host="localhost", port=27017)
+    db = client["EveryDayWeChat"]
+    global collection
+    collection = db["Qinghua"]
+    global collection2
+    collection2 = db["budejie"]
+
     # 判断是否登录，如果没有登录则自动登录，返回 False 表示登录失败
     if not is_online(auto_login=True):
         return
-
 
 def is_online(auto_login=False):
     """
@@ -108,6 +114,15 @@ def init_data():
 
     print('初始化完成，开始正常工作。')
 
+def insert_qinghua(message):
+    try:
+        result = collection.insert_one({'message':message})
+    except Exception:
+        pass
+
+def find_qinghua(message):
+    result = collection.find_one({'message':message})
+    return result
 
 def init_alarm(alarm_dict):
     """
@@ -124,7 +139,7 @@ def init_alarm(alarm_dict):
             scheduler.add_job(send_tuwei_message, 'cron', [key], hour=value['hour'],
                               minute=value['minute'], id=key, misfire_grace_time=600)
         else:
-            scheduler.add_job(send_xiaohua_message, 'cron', [key], hour=value['hour'],
+            scheduler.add_job(send_image, 'cron', [key], hour=value['hour'],
                               minute=value['minute'], id=key, misfire_grace_time=600)
 
     scheduler.start()
@@ -137,8 +152,34 @@ def download_image(url):
     name = os.path.basename(url)
     return urlretrieve(url, './image/' + name)
 
+def find_imageurl():
+    result = collection2.find_one({"status":0})
+    return result
+
 def send_image(key):
-    download_image()
+    print('\n启动定时消息提醒...')
+
+    result = find_imageurl()
+    file_path = download_image(result["image"])[0]
+
+    if not  file_path or not is_online(): return
+
+    conf = config.get('alarm_info').get('alarm_dict')
+    gf = conf.get(key)
+
+    uuid_list = gf.get('uuid_list')
+    for uuid in uuid_list:
+        time.sleep(1)
+        itchat.send(result["title"], toUserName=uuid)
+        itchat.send_image(fileDir=file_path, toUserName=uuid)
+
+    result["status"] = 1
+    collection2.update({"_id": result["_id"]}, result)
+
+    os.remove(file_path)
+
+    print('\n定时内容:\n{}\n发送成功...\n\n'.format(result["image"]))
+    print('自动提醒消息发送完成...\n')
 
 def send_tuwei_message(key):
     """ 发送定时消息 """
@@ -149,6 +190,14 @@ def send_tuwei_message(key):
     dictum = get_dictum_info(7)
 
     if not dictum or not is_online(): return
+
+    b_insert = find_qinghua(dictum)
+    while(b_insert):
+        dictum = get_dictum_info(7)
+        b_insert = find_qinghua(dictum)
+
+    insert_qinghua(dictum)
+
     uuid_list = gf.get('uuid_list')
     for uuid in uuid_list:
         time.sleep(1)
@@ -163,7 +212,16 @@ def send_xiaohua_message(key):
     gf = conf.get(key)
 
     dictum = get_dictum_info(5)
+
     if not dictum or not is_online(): return
+
+    b_insert = find_qinghua(dictum)
+    while (b_insert):
+        dictum = get_dictum_info(5)
+        b_insert = find_qinghua(dictum)
+
+    insert_qinghua(dictum)
+
     uuid_list = gf.get('uuid_list')
     for uuid in uuid_list:
         time.sleep(1)
