@@ -11,6 +11,7 @@ import platform
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.schedulers.background import BackgroundScheduler
 import itchat
+import pymongo
 from itchat.content import (
     TEXT
 )
@@ -36,13 +37,17 @@ from everyday_wechat.utils.friend_helper import (
 
 __all__ = ['run']
 
-
 def run():
     """ 主运行入口 """
+
+    client = pymongo.MongoClient(host="localhost", port=27017)
+    db = client["EveryDayWeChat"]
+    global collection
+    collection = db["Qinghua"]
+
     # 判断是否登录，如果没有登录则自动登录，返回 False 表示登录失败
     if not is_online(auto_login=True):
         return
-
 
 def is_online(auto_login=False):
     """
@@ -104,6 +109,15 @@ def init_data():
 
     print('初始化完成，开始正常工作。')
 
+def insert_qinghua(message):
+    try:
+        result = collection.insert_one({'message':message})
+    except Exception:
+        pass
+
+def find_qinghua(message):
+    result = collection.find_one({'message':message})
+    return result
 
 def init_alarm(alarm_dict):
     """
@@ -136,6 +150,14 @@ def send_tuwei_message(key):
     dictum = get_dictum_info(7)
 
     if not dictum or not is_online(): return
+
+    b_insert = find_qinghua(dictum)
+    while(b_insert):
+        dictum = get_dictum_info(7)
+        b_insert = find_qinghua(dictum)
+
+    insert_qinghua(dictum)
+
     uuid_list = gf.get('uuid_list')
     for uuid in uuid_list:
         time.sleep(1)
@@ -150,7 +172,16 @@ def send_xiaohua_message(key):
     gf = conf.get(key)
 
     dictum = get_dictum_info(5)
+
     if not dictum or not is_online(): return
+
+    b_insert = find_qinghua(dictum)
+    while (b_insert):
+        dictum = get_dictum_info(5)
+        b_insert = find_qinghua(dictum)
+
+    insert_qinghua(dictum)
+
     uuid_list = gf.get('uuid_list')
     for uuid in uuid_list:
         time.sleep(1)

@@ -12,7 +12,7 @@ with open(os.path.join(os.path.dirname(__file__), '_city_sojson.json'), 'r', enc
     CITY_CODE_DICT = json.loads(f.read())
 
 MSG_TOMORROW = '明日{city_name}天气\n{_date} {week}\n【明日天气】{_type}\n【明日气温】{low_temp} {high_temp}\n【明日风速】{speed}\n【出行提醒】{notice}'
-MSG_TODAY = '今日{city_name}天气\n{_date},{week}\n【今日天气】{_type}\n【今日气温】{low_temp} {high_temp}\n【今日风速】{speed}\n【出行提醒】{notice}'
+MSG_TODAY = '{_date},{week}\n今日{city_name}天气\n【今日天气】{_type}\n【今日气温】{low_temp} {high_temp}\n【今日风速】{speed}\n【出行提醒】{notice}'
 
 
 def get_sojson_weather(city_name, is_tomorrow=False):
