@@ -7,6 +7,7 @@
 
 import time
 # import json
+import os
 import platform
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -39,6 +40,9 @@ __all__ = ['run']
 
 def run():
     """ 主运行入口 """
+
+    os.makedirs('./image/', exist_ok=True)
+
     # 判断是否登录，如果没有登录则自动登录，返回 False 表示登录失败
     if not is_online(auto_login=True):
         return
@@ -126,6 +130,15 @@ def init_alarm(alarm_dict):
     scheduler.start()
     print('已开启定时发送提醒功能...')
     # print(scheduler.get_jobs())
+
+def download_image(url):
+    from urllib.request import urlretrieve
+
+    name = os.path.basename(url)
+    return urlretrieve(url, './image/' + name)
+
+def send_image(key):
+    download_image()
 
 def send_tuwei_message(key):
     """ 发送定时消息 """
